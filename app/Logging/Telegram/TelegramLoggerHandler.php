@@ -11,6 +11,7 @@ class TelegramLoggerHandler extends AbstractProcessingHandler
 {
     protected int $chatId;
     protected string $token;
+
     public function __construct(array $config)
     {
         $level = Logger::toMonologLevel($config['level']);
@@ -25,6 +26,7 @@ class TelegramLoggerHandler extends AbstractProcessingHandler
         TelegramBotApi::sendMessage(
             $this->token,
             $this->chatId,
-            $record->formatted);
+            $record->formatted
+        );
     }
 }

@@ -12,33 +12,28 @@ use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
-    /**
-     * Register any application services.
-     */
-    public function register(): void
-    {
-        //
-    }
 
-    /**
-     * Bootstrap any application services.
-     */
     public function boot(): void
     {
-        Model::preventLazyLoading(!app()->isProduction());
-        Model::preventSilentlyDiscardingAttributes(!app()->isProduction());
-        DB::whenQueryingForLongerThan(500, function (Connection $connection, QueryExecuted $event) {
-            logger()->channel('telegram')
-                ->debug('Long term SQL query: "' . $connection->query()->toSql() . '"');
-        });
+        Model::shouldBeStrict(!app()->isProduction());
 
-        $kernel = app(Kernel::class);
-        $kernel->whenRequestLifecycleIsLongerThan(
-            CarbonInterval::seconds(4),
-            function () {
-                logger()->channel('telegram')
-                    ->debug('Long term query: "' . request()->url() . '"');
-            }
-        );
+        if (app()->isProduction()) {
+
+            DB::listen(function ($query) {
+                if ($query->time > 100) {
+                    logger()
+                        ->channel('telegram')
+                        ->debug('SQL query longer then 1ms: ' . $query->sql, $query->bindings);
+                }
+            });
+
+            app(Kernel::class)->whenRequestLifecycleIsLongerThan(
+                CarbonInterval::seconds(4),
+                function () {
+                    logger()->channel('telegram')
+                        ->debug('Long term query: "' . request()->url() . '"');
+                }
+            );
+        }
     }
 }
